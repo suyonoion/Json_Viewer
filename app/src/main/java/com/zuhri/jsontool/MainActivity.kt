@@ -2,6 +2,7 @@ package com.zuhri.jsontool
 
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -46,14 +47,23 @@ class MainActivity : AppCompatActivity() {
             contentResolver.openInputStream(uri)?.use { inputStream ->
                 val reader = BufferedReader(InputStreamReader(inputStream))
                 val rawData = reader.readText()
-                
-                // Teruskan data mentah ke blok pemrosesan JSON
-                val jsonObject = JSONObject(rawData)
-                
+
+                if (rawData.isBlank()) {
+                    throw IllegalArgumentException("File kosong")
+                }
+
+                // Root JSON bisa berupa objek {...} atau array [...]
+                val trimmed = rawData.trim()
+                val rootElement: Any = if (trimmed.startsWith("[")) {
+                    JSONArray(trimmed)
+                } else {
+                    JSONObject(trimmed)
+                }
+
                 // Contoh instruksi operasional: Eksekusi penghapusan serempak
                 // targetKeyToDestroy adalah kunci yang ingin dilenyapkan dari sistem
-                val processedData = executeMassExtraction(jsonObject, targetKeyToDestroy = "id_tidak_berguna")
-                
+                val processedData = executeMassExtraction(rootElement, targetKeyToDestroy = "id_tidak_berguna")
+
                 // processedData sekarang berisi struktur JSON yang telah dibersihkan
                 val flatList = mutableListOf<JsonNode>()
                 flattenJson(processedData, "root", 0, flatList)
@@ -63,7 +73,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "Gagal memproses material data", Toast.LENGTH_SHORT).show()
+            Log.e("JsonTool", "Gagal memproses file", e)
+            Toast.makeText(this, "Gagal memproses: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
