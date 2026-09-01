@@ -13,10 +13,6 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         
-    # INJEKSI BARU: Memaksa infrastruktur cloud mencetak komponen pembakar
-    - name: Cetak Tuas Engkol (Generate Gradle Wrapper)
-      run: gradle wrapper
-      
     - name: Buka Katup Eksekusi Gradle
       run: chmod +x gradlew
       
