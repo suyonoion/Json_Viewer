@@ -5,12 +5,17 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
 class MainActivity : AppCompatActivity() {
+
+    private val jsonTreeAdapter = JsonTreeAdapter()
 
     // Katup Intake: Pemilih file berbasis Storage Access Framework (SAF)
     private val openDocumentLauncher = registerForActivityResult(
@@ -23,9 +28,16 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Pemicu manual: Menjalankan mesin pemilih file
-        // Hubungkan ini dengan tombol UI Anda nantinya
-        // openDocumentLauncher.launch(arrayOf("application/json", "text/xml"))
+        // Setup daftar tampilan struktur JSON/XML
+        val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = jsonTreeAdapter
+
+        // Sambungkan tombol FAB ke pemilih file
+        val fabAdd = findViewById<FloatingActionButton>(R.id.fab_add)
+        fabAdd.setOnClickListener {
+            openDocumentLauncher.launch(arrayOf("application/json", "text/xml"))
+        }
     }
 
     // Mekanisme pembacaan arus data dari penyimpanan ke memori sementara
@@ -43,10 +55,38 @@ class MainActivity : AppCompatActivity() {
                 val processedData = executeMassExtraction(jsonObject, targetKeyToDestroy = "id_tidak_berguna")
                 
                 // processedData sekarang berisi struktur JSON yang telah dibersihkan
-                // Integrasikan ke RecyclerView Adapter di sini
+                val flatList = mutableListOf<JsonNode>()
+                flattenJson(processedData, "root", 0, flatList)
+
+                runOnUiThread {
+                    jsonTreeAdapter.submitList(flatList)
+                }
             }
         } catch (e: Exception) {
             Toast.makeText(this, "Gagal memproses material data", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Meratakan struktur JSON bersarang menjadi daftar baris untuk RecyclerView
+    private fun flattenJson(element: Any, key: String, depth: Int, result: MutableList<JsonNode>) {
+        when (element) {
+            is JSONObject -> {
+                result.add(JsonNode(key, "{...}", depth))
+                val keys = element.keys()
+                while (keys.hasNext()) {
+                    val k = keys.next()
+                    flattenJson(element.get(k), k, depth + 1, result)
+                }
+            }
+            is JSONArray -> {
+                result.add(JsonNode(key, "[...]", depth))
+                for (i in 0 until element.length()) {
+                    flattenJson(element.get(i), "[$i]", depth + 1, result)
+                }
+            }
+            else -> {
+                result.add(JsonNode(key, element.toString(), depth))
+            }
         }
     }
 
