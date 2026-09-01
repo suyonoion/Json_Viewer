@@ -1,4 +1,4 @@
-name: Json_Viewer Assembly Line
+name: Pustaka-FK Assembly Line
 on:
   push:
     branches: [ main ]
@@ -12,13 +12,19 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        
+    # INJEKSI BARU: Memaksa infrastruktur cloud mencetak komponen pembakar
+    - name: Cetak Tuas Engkol (Generate Gradle Wrapper)
+      run: gradle wrapper
+      
     - name: Buka Katup Eksekusi Gradle
       run: chmod +x gradlew
+      
     - name: Mulai Kompilasi (Assemble Debug)
       run: ./gradlew assembleDebug
+      
     - name: Ekspor Hasil APK
       uses: actions/upload-artifact@v4
       with:
         name: json-xml-tool-debug
         path: app/build/outputs/apk/debug/app-debug.apk
-
